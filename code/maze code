@@ -1,0 +1,205 @@
+import math
+import matplotlib.pyplot as plt
+import random
+
+
+global database
+database = []
+
+#this def is to make the user easier to change the ending value 
+def end_position():
+    x = 1
+    y = 3
+    return(x,y)
+
+#this def is to make the user easier to change the starting value 
+def starting_position():
+    x = 24
+    y = 25
+    return(x,y)
+
+#import the data, change your path to where you actually save the maze.txt
+def importing_data():
+    f = open(r"change to the path that you have the maze thanks")
+    raw_data = f.readlines()
+    f.close()
+    return(raw_data)
+
+#if the maze is not in true and false, the eval will return that the word is not defined
+def evaluation(raw_data):
+    evaluated_data = []
+    for i in raw_data:
+        if eval(i):
+             evaluated_data.append(1)  #converting Truth to a 1 which represent a wall
+        else:
+             evaluated_data.append(0)  #converting False to a 0 which represent an empty space
+    return(evaluated_data)
+         
+
+def finding_the_axis_of_the_graph(evaluated_data):
+    #finding the length of the maze, assuming is a square 
+    length = math.sqrt(len(evaluated_data))
+    if length%int(length) == 0:
+       x_axis = int(length)
+       y_axis = int(length)
+    else:                   #this code makes the users to manually input the x and y axis as it is not a square
+        x_axis = int(input("pls manual input x_axis"))
+        y_axis = int(input("pls manual input y_axis"))
+        if x_axis*y_axis != len(evaluated_data):   #raise error if the users didnt make the correct input
+            raise ValueError("the x_axis and y_axis is wrong, please recheck with your maze again")
+    return(x_axis,y_axis)
+
+
+def making_of_the_maze(x_axis,y_axis,evaluated_data):
+    arranged_data = [1]*x_axis
+    arranged_data[0] = evaluated_data[(y_axis-1)::-1]      #this is to mark out the first x array
+    for i in range(1,x_axis):   #then all the rest
+        arranged_data[i]=evaluated_data[y_axis*i+(y_axis-1):y_axis*i-1:-1] 
+             
+#marking the ending point into 3 so that the loop in the unmodified_pathway have a place to stop as it is easier to set a condition for the code to know where to stop.
+
+    x,y = end_position()
+    arranged_data[x][y]=3
+    x,y = starting_position()
+    arranged_data[x][y]=2
+    
+    return (arranged_data)
+
+
+    
+
+def unmodified_pathway(arranged_data):
+    x,y = starting_position()
+    result=[[x,y]]
+    random_number = 0
+    #this while function choose 1 to 4 randomly and run either
+    #up down left or right by +-x and +-y
+    while(arranged_data[x][y]!=3):
+        random_number = random.randint(1,4)
+        if random_number == 1: 
+            new_x = x + 1
+            new_y = y
+        elif random_number == 2:
+            new_x = x - 1
+            new_y = y
+        elif random_number == 3:
+            new_y = y + 1
+            new_x = x
+        elif random_number == 4:
+            new_y = y - 1
+            new_x = x
+            
+        #when the code run into the wall, the new_x and new_y wont be saved 
+        #but when the code didnt, it just saves the new_x and new_y into the result
+        if arranged_data[new_x][new_y]==1:
+            continue       #this return to line 77
+        else:
+            result.append([new_x,new_y])  #this save the new co-ordinate into the result and append
+            x = new_x
+            y = new_y
+            continue        
+
+    return (result)
+
+
+
+#this function run together with the "modification" function
+def check_for_uniques(result):
+    while len(result)!=0:
+        test = result[0]                #prepare for testing
+        result = result[1:]             #remove the first co-ordinate by slicing
+        if test in result:
+            return True
+    return False
+
+
+
+def modification(result):  
+    """
+    i dont want the same co-ordinate to appear twice,
+    so what i do is i remove the first co-ordinate out and try to find out
+    whether is there any co-ordinate that appear twice,
+    if there is, i remove all the co-ordinate starting from the co-ordinate 
+    after the first co-ordinate all the way to the second same co-ordinate
+    this works as so long as the maze return to the same co-ordinate,
+    all the co-ordinates in between them does not matter
+    """
+    while(check_for_uniques(result)):      #check if there is any co-ordinate that repeats 
+        new_result=[]
+        while len(result)!=0:               #as we are removing the co-ordinate in the result(in line 132), this loop is not infinite
+            test = result[0]                #prepare for testing
+            new_result.append(result[0])    #place the first co-ordinate into the new_result as we can confirm we need this co-ordinate
+            result = result[1:]             #remove the first co-ordinate by slicing
+            if test in result:              #if the first co-ordinate appear again in the list, slice away all the co-ordinate in between these 2 co-ordinates 
+                delete = result.index(test)
+                result = result[delete+1:]
+        result = new_result
+
+    return(result)
+
+
+
+    #code for the maze itself, combining the result with the maze
+def maze_with_result(new_result,arranged_data):
+    """ 
+    setting 0 is empty, 1 is the wall, 2 is the path, 
+    3 will be the ending  point
+    """
+    x,y=starting_position() 
+    arranged_data[x][y]=2               #marking the starting position
+    r=0
+    while(r<len(new_result)):           #this runs throught the all the co-ordinate and place a number 2 to mark the path for the graph later
+        q=new_result[r][0]
+        w=new_result[r][1]
+        arranged_data[q][w]=2
+        r += 1
+    return (arranged_data)
+     
+
+def plotting_of_graph(final_result): 
+    plt.figure(figsize = (10,10))  #changing the size of the graph 
+    x,y = end_position()
+    final_result[x][y]=3
+    x,y = starting_position()
+    #plotting of the actual graph
+    for i in range(51):
+        for j in range(51):
+            if final_result[i][j]==1:  #wall
+                plt.plot([i], [j], 'r*--')
+            elif final_result[i][j]==2:  #path
+                plt.plot([i], [j], marker='*', markersize=6, color="blue")
+            elif final_result[i][j]==3:  #ending
+                plt.plot([i], [j], marker='*', markersize=10, color="red")
+    plt.plot(x, y, marker='*', markersize=10, color="black")
+    plt.show()
+
+
+
+def check_for_repeat(new_result):
+    if new_result not in database:
+        database.append(new_result)
+        return False
+    else:
+        return True
+
+
+number_of_runs = int(input("How many runs do you want to run the maze:\t"))
+run_number = 1
+while (run_number <= number_of_runs):
+    raw_data=importing_data()
+    evaluated_data = evaluation(raw_data)
+    x_axis,y_axis = finding_the_axis_of_the_graph(evaluated_data)
+    arranged_data = making_of_the_maze(x_axis, y_axis, evaluated_data)
+    result = unmodified_pathway(arranged_data)
+    new_result = modification(result)
+    if (check_for_repeat(new_result)):
+        continue
+    final_result = maze_with_result(new_result,arranged_data)
+
+    plotting_of_graph(final_result)
+    
+    
+    run_number += 1
+    
+
+
